@@ -23,8 +23,8 @@ void InitialiseSystemClock()
 void SetupTimer2()
 {
     TIM2->PSCR = 0x00;       //  Prescaler = 1.
-    TIM2->ARRH = 0x03;       //  High byte of 1000.
-    TIM2->ARRL = 0xe8;       //  Low byte of 1000.
+    TIM2->ARRH = 0x0F;       //  High byte of 4096
+    TIM2->ARRL = 0xFF;       //  Low byte of 4096
     TIM2->CR1 = TIM2_CR1_CEN;       //  Finally enable the timer.
 }
 
@@ -54,32 +54,6 @@ void SetupTimer2_CH3()
     TIM2->CCMR3 =  TIM2_OCMODE_PWM1;    //  PWM Mode 1 - active if counter < CCR1, inactive otherwise.
 }
 
-void InitialiseTimer2()
-{
-    TIM2->CR1 = 0;               // Turn everything TIM2 related off.
-    TIM2->IER = 0;
-    TIM2->SR2 = 0;
-    TIM2->CCER1 = 0;
-    TIM2->CCER2 = 0;
-    TIM2->CCER1 = 0;
-    TIM2->CCER2 = 0;
-    TIM2->CCMR1 = 0;
-    TIM2->CCMR2 = 0;
-    TIM2->CCMR3 = 0;
-    TIM2->CNTRH = 0;
-    TIM2->CNTRL = 0;
-    TIM2->PSCR = 0;
-    TIM2->ARRH  = 0;
-    TIM2->ARRL  = 0;
-    TIM2->CCR1H = 0;
-    TIM2->CCR1L = 0;
-    TIM2->CCR2H = 0;
-    TIM2->CCR2L = 0;
-    TIM2->CCR3H = 0;
-    TIM2->CCR3L = 0;
-    TIM2->SR1 = 0;
-}
-
 void delay()
 {
 
@@ -91,34 +65,88 @@ void delay()
 
 void setcolor( uint16_t R, uint16_t G, uint16_t B )
 {
-	TIM2_SetCompare1(R); //R
-	TIM2_SetCompare2(G); //G
-	TIM2_SetCompare3(B); //B
+	TIM2_SetCompare1(R&4095); //R
+	TIM2_SetCompare2(G&4095); //G
+	TIM2_SetCompare3(B&4095); //B
 }
+
+
+
+void uarttx_str( char* str )
+{
+	char* ch = str;
+
+	while( *ch )
+	{
+		UART1->DR = (unsigned char) *ch;
+		while( ( UART1->SR & UART1_SR_TXE ) == 0); // DR to be transfered to shift register
+		ch++;
+	}
+
+	//Wait for shift register to empty
+	while( ( UART1->SR & UART1_SR_TC ) == 0) nop();
+} 
 
 void main()
 {
+	uint8_t RGB[6];
+	uint8_t offset = 0;
+	uint8_t tmp = 0;
 
 	disableInterrupts();
 	InitialiseSystemClock();
-	InitialiseTimer2();
+	TIM2_DeInit();
+
 	SetupTimer2();
 	SetupTimer2_CH1();
 	SetupTimer2_CH2();
 	SetupTimer2_CH3();
-    //    TIM1_OC1Init( TIM1_OCMODE_PWM1 , TIM1_OUTPUTSTATE_ENABLE, TIM1_OUTPUTNSTATE_DISABLE, 500, TIM1_OCPOLARITY_HIGH, TIM1_OCNPOLARITY_HIGH, TIM1_OCIDLESTATE_RESET, TIM1_OCNIDLESTATE_RESET);
+
+	UART1_DeInit();
+	UART1_Init( 1000000, 0, 0, 0, UART1_SYNCMODE_CLOCK_DISABLE, UART1_MODE_TXRX_ENABLE);
+
 	enableInterrupts()
 
-	delay();
+        setcolor(100, 100, 100);
+
+	uarttx_str( "READY\n");
+
     while(1)
     {
-	//wfi();
-	setcolor(100, 0, 0);
-	delay();
-	setcolor(0,100, 0);
-	delay();
-	setcolor(0, 0, 100);
-	delay();
-	
+	while( ( UART1->SR & UART1_SR_RXNE == 0 ) && ( UART1->SR & UART1_SR_IDLE == 0 ) );
+
+	if( UART1->SR & UART1_SR_RXNE  )
+	{
+		//RX Byte
+		if( offset < 6 )
+		{
+			RGB[ offset++ ] = UART1->DR;
+		}
+		else
+		{
+			tmp = UART1->DR; 
+			UART1->DR = tmp;
+		}
+	}
+	if( UART1->SR & UART1_SR_IDLE )
+	{
+		uint16_t R,G,B;
+		//CLEAR IDLE FLAG - READ SR then DR
+		tmp = UART1->SR;
+		tmp = UART1->DR;
+
+		R = ((uint16_t)RGB[1]) << 8 | RGB[0];
+		G = ((uint16_t)RGB[3]) << 8 | RGB[2];
+		B = ((uint16_t)RGB[5]) << 8 | RGB[4];
+
+		//WAIT FOR TX TO FINISH - so next controller can shift in data
+		while( ( UART1->SR & UART1_SR_TC ) == 0);
+		
+		//DRAW
+		setcolor( R,G,B );
+		offset=0;
+	}
+
     }
+
 }

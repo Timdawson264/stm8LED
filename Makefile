@@ -1,5 +1,5 @@
 CC=sdcc
-CFLAGS=-DSTM8S103 --opt-code-size -mstm8 -I inc -I src -L lib --std-sdcc11 
+CFLAGS=-DSTM8S103 --opt-code-size -mstm8 -I inc -I src -L lib --std-sdcc99
 
 C_FILES := $(wildcard src/*.c)
 OBJ_FILES := $(addprefix src/,$(notdir $(C_FILES:.c=.rel)))
@@ -23,4 +23,4 @@ lib/stm8s.lib : $(OBJ_FILES_MANUAL)
 
 projects/%.ihx : projects/%.c lib/stm8s.lib
 	$(CC) $(CFLAGS) -lstm8s --out-fmt-ihx $<  -o $@
-	sudo stm8flash -c stlinkv2 -w projects/LEDstripe.ihx -p stm8s103f2
+	sudo stm8flash -c stlinkv2 -w projects/LEDstripe.ihx -p stm8s103f3
