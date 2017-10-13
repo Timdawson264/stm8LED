@@ -22,5 +22,5 @@ lib/stm8s.lib : $(OBJ_FILES_MANUAL)
 	sdcclib -r $@ $(OBJ_FILES_MANUAL)
 
 projects/%.ihx : projects/%.c lib/stm8s.lib
-	$(CC) $(CFLAGS) --out-fmt-ihx $<  -o $@
+	$(CC) $(CFLAGS) -lstm8s --out-fmt-ihx $<  -o $@
 	sudo stm8flash -c stlinkv2 -w projects/LEDstripe.ihx -p stm8s103f2

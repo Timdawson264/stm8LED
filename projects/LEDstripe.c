@@ -1,7 +1,6 @@
 #include <stdint.h>
 
 #include "stm8s.h"
-#include "stm8s_tim2.c"
 
 void InitialiseSystemClock()
 {
