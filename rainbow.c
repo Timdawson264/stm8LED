@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <sys/ioctl.h>
+
+#include <asm-generic/termbits.h>
 
 struct pixle{
 	uint16_t R;
@@ -53,6 +56,16 @@ int main( int argc, char** argv )
 		exit(1);
 	}
 
+	//Set Baud Rate
+	struct termios2 tio;
+	ioctl(fd, TCGETS2, &tio);
+	tio.c_cflag &= ~CBAUD;
+	tio.c_cflag |= BOTHER;
+	tio.c_ispeed = 1000000;
+	tio.c_ospeed = 1000000;
+	ioctl(fd, TCSETS2, &tio);
+
+
 	struct pixle p1 = {UINT16_MAX,0,0};
 	struct pixle p2 = {0,UINT16_MAX,0};
 	struct pixle p3 = {0,0,UINT16_MAX};
@@ -65,19 +78,19 @@ int main( int argc, char** argv )
 	sleep(1);
 
 	double  h = 0;
-	double step = 0.00001;
+	double step = 0.00005;
 	size_t sleep_len = ( 60*1000000 ) / ( 1.0f / step ) ;
 	printf( "Sleep size: %zu us\n", sleep_len ); 
 	struct pixle p = {0,0,0};
 	while(1)
 	{
-		HSVtoRGB( h, 1, 0.25f, &p);
+		HSVtoRGB( h, 1, 0.01f, &p);
 		//printf( "H: %f, R: %hu, G: %hu, B: %hu\n", h, p.R, p.G, p.B );
 		sendcolor( fd, &p, 1 );
 		usleep( sleep_len );
 
 		h = fmod( (h+step), 1.0f );
-	}	
+	}
 
 
 	return 0;
