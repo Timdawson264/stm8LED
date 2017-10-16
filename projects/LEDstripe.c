@@ -23,8 +23,8 @@ void InitialiseSystemClock()
 void SetupTimer2()
 {
     TIM2->PSCR = 0x00;       //  Prescaler = 1.
-    TIM2->ARRH = 0x0F;       //  High byte of 4096
-    TIM2->ARRL = 0xFF;       //  Low byte of 4096
+    TIM2->ARRH = 0x10;       //  High byte of 4096
+    TIM2->ARRL = 0x00;       //  Low byte of 4096
     TIM2->CR1 = TIM2_CR1_CEN;       //  Finally enable the timer.
 }
 
@@ -65,9 +65,11 @@ void delay()
 
 void setcolor( uint16_t R, uint16_t G, uint16_t B )
 {
-	TIM2_SetCompare1(R&4095); //R
-	TIM2_SetCompare2(G&4095); //G
-	TIM2_SetCompare3(B&4095); //B
+	// (2<<16-1) / 4096 ~= 16	
+	//therefore to rescale 16bit channels to 12 we right shift 4
+	TIM2_SetCompare1(R>>4); //R
+	TIM2_SetCompare2(G>>4); //G
+	TIM2_SetCompare3(B>>4); //B
 }
 
 

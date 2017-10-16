@@ -38,9 +38,9 @@ void HSVtoRGB(float h, float s, float v, struct pixle* out)
         case 5: r = v, g = p, b = q; break;
     }
 
-	out->R = r*4000;
-	out->G = g*4000;
-	out->B = b*4000;
+	out->R = r*UINT16_MAX;
+	out->G = g*UINT16_MAX;
+	out->B = b*UINT16_MAX;
 }
 
 int main( int argc, char** argv )
@@ -52,16 +52,25 @@ int main( int argc, char** argv )
 		exit(1);
 	}
 
-	struct pixle p = {0,512,0};
-	sendcolor( fd, &p, 1 ); 
+	struct pixle p1 = {UINT16_MAX,0,0};
+	struct pixle p2 = {0,UINT16_MAX,0};
+	struct pixle p3 = {0,0,UINT16_MAX};
+
+	sendcolor( fd, &p1, 1 ); 
+	sleep(1);
+	sendcolor( fd, &p2, 1 ); 
+	sleep(1);
+	sendcolor( fd, &p3, 1 ); 
+	sleep(1);
 
 	double  h = 0;
-	double step = 0.0001;
-	size_t sleep_len = ( 10*1000000 ) / ( 1.0f / step ) ;
+	double step = 0.00001;
+	size_t sleep_len = ( 60*1000000 ) / ( 1.0f / step ) ;
 	printf( "Sleep size: %zu us\n", sleep_len ); 
+	struct pixle p = {0,0,0};
 	while(1)
 	{
-		HSVtoRGB( h, 1, 0.25, &p);
+		HSVtoRGB( h, 1, 0.25f, &p);
 		//printf( "H: %f, R: %hu, G: %hu, B: %hu\n", h, p.R, p.G, p.B );
 		sendcolor( fd, &p, 1 );
 		usleep( sleep_len );
