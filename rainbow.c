@@ -45,6 +45,7 @@ void HSVtoRGB(float h, float s, float v, struct pixle* out)
 
 int main( int argc, char** argv )
 {
+	//TODO: Set baud rate and calculate max number of updates/s with said baudrate and number of pixels
 	int fd = open( argv[1], O_WRONLY);
 	if( fd == -1)
 	{
