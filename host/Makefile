@@ -1,7 +1,7 @@
 CC=clang-3.8
 CXX=clang++-3.8
-CFLAGS=-lm -O3
-CXXFLAGS=-O3 -lm -lrtaudio -lfftw3f
+CFLAGS=-ggdb -lm -O3
+CXXFLAGS=-ggdb -O0 -Irtaudio -lm  -lfftw3f -Lrtaudio -lrtaudio -rpath rtaudio/
 
 all: rainbow pulse music
 
@@ -9,4 +9,4 @@ all: rainbow pulse music
 	$(CC) $(CFLAGS) $< -o $@
 
 % : %.cc pixel.h
-	$(CXX) $(CXXFLAGS) $< -o $@
+	$(CXX) $< $(CXXFLAGS) -o $@
