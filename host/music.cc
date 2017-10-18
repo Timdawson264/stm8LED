@@ -85,6 +85,7 @@ struct context
     fftwf_plan plan;
     pixel pix;
     int pix_fd;
+    float all_time_max;
 };
 
 
@@ -92,70 +93,66 @@ int record( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
             double streamTime, RtAudioStreamStatus status, void *userData )
 {
     context* ctx = (context*)userData;
-    size_t half = ctx->n / 2;
-
-    float* inputBuffer_f = (float*) inputBuffer;
+    const size_t fft_size = ctx->n;
+    const size_t fft_half = ctx->n / 2;
+    const size_t new_data_count = nBufferFrames;
+    const float* inputBuffer_f = (float*) inputBuffer;
 
     if ( status )
         std::cout << "Stream overflow detected!" << std::endl;
     // Do something with the data in the "inputBuffer" buffer.
 //     std::cout << "Record: " << nBufferFrames << std::endl;
 
-    if( nBufferFrames > ctx->n )
+    if( new_data_count > fft_size )
     {
         std::cerr << "To many samples in record callback" << std::endl;
         abort();
     }
 
-    std::memcpy( ctx->in_buffer, ctx->in_buffer+half, half*sizeof(float) );
+    size_t in_buffer_off = (fft_size - new_data_count);
 
-    for (size_t i = 0; i < half; i++)
+    //shift FFT input down and append new data to end.
+    std::memcpy( ctx->in_buffer, ctx->in_buffer+new_data_count, in_buffer_off*sizeof(float) );
+
+    //add new data and hann window it.
+    for (size_t i = 0; i < new_data_count; i++)
     {
-        double multiplier = 0.5 * ( 1 - cos(2*M_PI*i/ctx->n) );
-        ctx->in_buffer[i+half] = multiplier * inputBuffer_f[i];
+        double multiplier = 0.5 * ( 1 - cos(2*M_PI*i/fft_size) );
+        ctx->in_buffer[i+in_buffer_off] = multiplier * inputBuffer_f[i];
     }
 
     //DO FFT
     fftwf_execute( ctx->plan );
 
 
-    for(size_t i=0; i<half; i++)
+    for(size_t i=0; i<fft_half; i++)
     {
-        ctx->out_buffer[i][0] *= 2.0/ctx->n;
-        ctx->out_buffer[i][1] *= 2.0/ctx->n;
+        ctx->out_buffer[i][0] *= 2.0/fft_size;
+        ctx->out_buffer[i][1] *= 2.0/fft_size;
         ctx->processed[i] = powf(ctx->out_buffer[i][0], 2) + powf(ctx->out_buffer[i][1], 2); // C^2 = A^2 + B^2
         ctx->processed[i] = sqrt( ctx->processed[i] ) ; // C = sqrt( C^2 )
     }
 
-    float* max_e = std::max_element( ctx->processed+1, ctx->processed+half );
-    *max_e = std::min( *max_e*5, 1.0f );
+    float* max_e = std::max_element( ctx->processed+1, ctx->processed+fft_half );
+    ctx->all_time_max = std::max( ctx->all_time_max, *max_e ); //max this the new max if it wins
+
+    *max_e = std::min( *max_e/ctx->all_time_max  , 1.0f );
 
     size_t max_idx = ( uintptr_t(max_e) - uintptr_t(ctx->processed) ) / sizeof(float);
 
 
-    float h = ( (float)max_idx/half ) * 360; //degrees 0-360
+    float h = ( (float)max_idx/fft_half ) * 360; //degrees 0-360
 
     std::cout << "MAX_n:\t" << max_idx << "\tMAX_v:\t" << *max_e << "\tH:\t" << h << std::endl;
 
-    if( *max_e > 0.001f )
-    {
+    float v = *max_e;
 
-        float v = *max_e;
+    hsv in = { h , 1, v };
+    rgb out = hsv2rgb( in );
+    pixel p = { out.r*UINT16_MAX, out.g*UINT16_MAX, out.b*UINT16_MAX };
+    ctx->pix = p;
 
-        hsv in = { h , 1, v };
-        rgb out = hsv2rgb( in );
-        pixel p = { out.r*UINT16_MAX, out.g*UINT16_MAX, out.b*UINT16_MAX };
-        ctx->pix = p;
-
-        pixel_sendcolor( ctx->pix_fd, &ctx->pix, 1 );
-    }
-    else
-    {
-        ctx->pix.R = 0;
-        ctx->pix.G = 0;
-        ctx->pix.B = 0;
-        pixel_sendcolor( ctx->pix_fd, &ctx->pix, 1 );
-    }
+    pixel_sendcolor( ctx->pix_fd, &ctx->pix, 1 );
 
     return 0;
 }
@@ -168,9 +165,8 @@ int main( int argc, char** argv )
     int fd = pixel_init( argv[1] );
     if( fd == -1 ) return 1;
 
-    context ctx;
+    context ctx = {0};
     ctx.pix_fd = fd;
-
     RtAudio adc(RtAudio::LINUX_PULSE);
 
     if ( adc.getDeviceCount() < 1 ) {
@@ -198,7 +194,7 @@ int main( int argc, char** argv )
 
     std::cerr << "FFT SIZE: " << bufferFrames*2 << std::endl;
 
-    ctx.n = bufferFrames*2;
+    ctx.n = 1024;
     ctx.in_buffer = (float*) malloc( sizeof(float) * ctx.n );
     ctx.out_buffer = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * ctx.n);
     ctx.processed = (float*) malloc( sizeof(float) * ctx.n / 2 );
