@@ -150,13 +150,16 @@ int record( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
     h = fmod( h+ctx->h_offset, 360.0 ); //offset H so the colour is always different
     ctx->h_offset = fmod( ctx->h_offset + ctx->h_offset_step, 360.0 );  //slowly change the colour over time.
 
-    std::cout << "MAX_n:\t" << max_idx << "\tMAX_v:\t" << *max_e << "\tH:\t" << h << std::endl;
-
     float v = *max_e;
+
+    std::cout << "MAX_n:\t" << max_idx << "\tMAX_v:\t" << v << "\tH:\t" << h << std::endl;
+
+    float gamma = 2.2f;
 
     hsv in = { h , 1, v };
     rgb out = hsv2rgb( in );
-    pixel p = { out.r*UINT16_MAX, out.g*UINT16_MAX, out.b*UINT16_MAX };
+    //inline gamma correction
+    pixel p = { pow(out.r,gamma)*UINT16_MAX, pow(out.g,gamma)*UINT16_MAX, pow(out.b,gamma)*UINT16_MAX };
     ctx->pix = p;
 
     pixel_sendcolor( ctx->pix_fd, &ctx->pix, 1 );
