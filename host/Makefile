@@ -1,7 +1,7 @@
-CC=clang-3.8
-CXX=clang++-3.8
-CFLAGS=-ggdb -lm -O3
-CXXFLAGS=-ggdb -O0 -Irtaudio -lm  -lfftw3f -Lrtaudio -lrtaudio -rpath rtaudio/
+CC=gcc
+CXX=g++
+CFLAGS=-ggdb -lm -O0
+CXXFLAGS=-ggdb -O0 -lfftw3f -Lrtaudio -lrtaudio -lm
 
 all: rainbow pulse music
 

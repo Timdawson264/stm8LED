@@ -1,7 +1,7 @@
 #include "pixel.h"
 
 #include <cmath>
-#include <RtAudio.h>
+#include <rtaudio/RtAudio.h>
 #include <fftw3.h>
 #include <cstring>
 #include <algorithm>
@@ -199,7 +199,7 @@ int main( int argc, char** argv )
     parameters.deviceId = adc.getDefaultInputDevice();
     parameters.nChannels = 1;
     parameters.firstChannel = 0;
-    unsigned int sampleRate = 8000;
+    unsigned int sampleRate = 16000;
     size_t update_rate = 60; //LED update rate
     unsigned int bufferFrames = sampleRate / update_rate;
 
@@ -207,7 +207,7 @@ int main( int argc, char** argv )
     ctx.h_offset_step = 360.0f / (float)(update_rate * 60 * 5 );
 
 
-    ctx.n = 512 ;
+    ctx.n = 1024 ;
     ctx.in_buffer = (float*) malloc( sizeof(float) * ctx.n );
     ctx.out_buffer = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * ctx.n);
     ctx.processed = (float*) malloc( sizeof(float) * ctx.n / 2 );

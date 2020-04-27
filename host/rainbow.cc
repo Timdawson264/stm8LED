@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+#include <tgmath.h>
 #include <sys/ioctl.h>
 
 #include <asm-generic/termbits.h>
@@ -51,9 +51,8 @@ int main( int argc, char** argv )
 	{
 		HSVtoRGB( h, 1, 0.5f, &p);
 		//printf( "H: %f, R: %hu, G: %hu, B: %hu\n", h, p.R, p.G, p.B );
-        pixel_sendcolor( fd, &p, 1 );
+        	pixel_sendcolor( fd, &p, 1 );
 		usleep( sleep_len );
-
 		h = fmod( (h+step), 1.0f );
 	}
 
